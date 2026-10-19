@@ -316,7 +316,7 @@ export class ColorExtractor {
   }
 
   /**
-   * Sample single pixel color from an Image or Canvas at exact coordinate
+   * Sample single pixel color from an Image or Canvas at exact coordinate (supports full native resolution)
    */
   samplePixel(img, xRatio, yRatio) {
     const w = img.naturalWidth || img.width;
@@ -335,7 +335,94 @@ export class ColorExtractor {
     return {
       rgb,
       hex: this.rgbToHex(rgb[0], rgb[1], rgb[2]),
-      hsl: this.rgbToHsl(rgb[0], rgb[1], rgb[2])
+      hsl: this.rgbToHsl(rgb[0], rgb[1], rgb[2]),
+      x: sx,
+      y: sy
+    };
+  }
+
+  /**
+   * Sample pixel by exact native pixel coordinates
+   */
+  samplePixelExact(img, pixelX, pixelY) {
+    const w = img.naturalWidth || img.width;
+    const h = img.naturalHeight || img.height;
+
+    this.canvas.width = 1;
+    this.canvas.height = 1;
+    const sx = Math.max(0, Math.min(w - 1, Math.round(pixelX)));
+    const sy = Math.max(0, Math.min(h - 1, Math.round(pixelY)));
+
+    this.ctx.clearRect(0, 0, 1, 1);
+    this.ctx.drawImage(img, sx, sy, 1, 1, 0, 0, 1, 1);
+    const pixel = this.ctx.getImageData(0, 0, 1, 1).data;
+
+    const rgb = [pixel[0], pixel[1], pixel[2]];
+    return {
+      rgb,
+      hex: this.rgbToHex(rgb[0], rgb[1], rgb[2]),
+      hsl: this.rgbToHsl(rgb[0], rgb[1], rgb[2]),
+      x: sx,
+      y: sy
+    };
+  }
+
+  /**
+   * Analyze image characteristics to identify recommended mood / theme
+   */
+  analyzeImageMood(pixels) {
+    if (!pixels || pixels.length === 0) return { mood: 'vibrant', confidence: 0.8, characteristics: 'Balanced palette' };
+
+    let totalLum = 0;
+    let totalSat = 0;
+    let totalWarmth = 0; // positive for red/orange/yellow, negative for blue/cyan
+
+    for (let i = 0; i < pixels.length; i++) {
+      const [r, g, b] = pixels[i];
+      const lum = this.getRelativeLuminance(r, g, b);
+      const [h, s, l] = this.rgbToHsl(r, g, b);
+
+      totalLum += lum;
+      totalSat += s;
+
+      // Warmth score: 0 to 60 deg is warm red/orange, 180 to 260 deg is cool blue
+      if (h <= 60 || h >= 330) {
+        totalWarmth += 1;
+      } else if (h >= 170 && h <= 270) {
+        totalWarmth -= 1;
+      }
+    }
+
+    const avgLum = totalLum / pixels.length;
+    const avgSat = totalSat / pixels.length;
+    const warmthRatio = totalWarmth / pixels.length;
+
+    let mood = 'vibrant';
+    let rationale = 'High dynamic range with vibrant color balance';
+
+    if (avgLum < 0.22 && avgSat > 0.4) {
+      mood = 'cyberpunk';
+      rationale = 'Dark atmosphere with electric high-contrast accents';
+    } else if (warmthRatio > 0.25) {
+      mood = 'warm';
+      rationale = 'Warm golden, terracotta, and amber chromatic spectrum';
+    } else if (warmthRatio < -0.25) {
+      mood = 'cool';
+      rationale = 'Cool arctic blues, cyans, and deep slate tones';
+    } else if (avgSat < 0.25) {
+      mood = 'minimal';
+      rationale = 'Understated, low saturation with clean neutral values';
+    } else if (avgLum > 0.5) {
+      mood = 'glass';
+      rationale = 'Luminous airy tones ideal for frosted glassmorphism';
+    }
+
+    return {
+      mood,
+      avgLum: Math.round(avgLum * 100),
+      avgSat: Math.round(avgSat * 100),
+      warmthRatio: Math.round(warmthRatio * 100),
+      rationale
     };
   }
 

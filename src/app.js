@@ -1,6 +1,7 @@
 /**
- * App Main Controller
- * Coordinates UI events, color extraction, presets, real-time adjustments, and export.
+ * App Main Controller v2.1
+ * Coordinates UI events, 6-slot uniform palette, full-scale precision sampler,
+ * interactive mockup tabs, audio player, search filter, and export.
  */
 
 import { ColorExtractor } from './color-extractor.js';
@@ -17,11 +18,24 @@ class App {
 
     this.currentImage = null;
     this.activeExportTab = 'css';
+    this.targetSamplingSlot = 0; // Default: Slot 1 (Primary)
+
+    // Full-scale sampler canvas offscreen
+    this.fullCanvas = document.createElement('canvas');
+    this.fullCtx = this.fullCanvas.getContext('2d', { willReadFrequently: true });
+
+    // Loupe canvas
+    this.loupeCanvas = null;
+    this.loupeCtx = null;
+
+    // Audio player state
+    this.isPlayingAudio = true;
 
     this.initDOMReferences();
     this.initEventListeners();
     this.renderWallpapers();
     this.renderPresets();
+    this.initSamplerLoupe();
 
     // Subscribe to ThemeEngine state updates
     this.engine.onChange((data) => this.handleThemeUpdate(data));
@@ -44,25 +58,15 @@ class App {
     this.dropzone = document.getElementById('dropzone');
     this.fileInput = document.getElementById('file-input');
     this.wallpaperGallery = document.getElementById('wallpaper-gallery');
-    this.btnEyedropper = document.getElementById('btn-eyedropper');
+    this.btnOpenFullSampler = document.getElementById('btn-open-full-sampler');
+    this.moodBadge = document.getElementById('mood-detected-badge');
+    this.moodText = document.getElementById('detected-mood-text');
 
-    // Palette & Strategy
+    // Palette & Slots
     this.strategySelect = document.getElementById('extraction-strategy');
-    this.paletteGrid = document.getElementById('palette-swatches-grid');
-    this.swatchCountTag = document.getElementById('swatch-count-tag');
-
-    // Role Pickers
-    this.pickerPrimary = document.getElementById('picker-primary');
-    this.pickerSecondary = document.getElementById('picker-secondary');
-    this.pickerAccent = document.getElementById('picker-accent');
-    this.pickerSurface = document.getElementById('picker-surface');
-    this.pickerBackground = document.getElementById('picker-background');
-
-    this.hexPrimary = document.getElementById('hex-label-primary');
-    this.hexSecondary = document.getElementById('hex-label-secondary');
-    this.hexAccent = document.getElementById('hex-label-accent');
-    this.hexSurface = document.getElementById('hex-label-surface');
-    this.hexBackground = document.getElementById('hex-label-background');
+    this.uniformPaletteGrid = document.getElementById('uniform-palette-grid');
+    this.rolesConfigPanel = document.getElementById('roles-config-panel');
+    this.activeTargetSlotIndicator = document.getElementById('active-target-slot-indicator');
 
     // Presets Grid
     this.presetsGrid = document.getElementById('presets-grid');
@@ -99,6 +103,37 @@ class App {
     // Preview
     this.wallpaperLayer = document.getElementById('wallpaper-layer');
     this.mediaCardImg = document.getElementById('media-card-img');
+    this.previewHeadingHighlight = document.getElementById('preview-heading-highlight');
+    this.previewPrimaryBtn = document.getElementById('preview-primary-btn');
+    this.btnDeployText = document.getElementById('btn-deploy-text');
+
+    // Interactive Preview Tabs
+    this.previewNavTabs = document.querySelectorAll('.nav-tab-btn');
+    this.tabPanels = document.querySelectorAll('.preview-tab-panel');
+
+    // Interactive Audio Widget
+    this.playerToggleBtn = document.getElementById('player-toggle-btn');
+    this.playerPrevBtn = document.getElementById('player-prev-btn');
+    this.playerNextBtn = document.getElementById('player-next-btn');
+    this.playerTrackTitle = document.getElementById('player-track-title');
+    this.playerStatusBadge = document.getElementById('player-status-badge');
+    this.audioWaveform = document.getElementById('audio-waveform');
+
+    // Interactive Search & Filters
+    this.sampleSearch = document.getElementById('sample-search');
+    this.filterChips = document.querySelectorAll('.chip-interactive');
+    this.activityList = document.getElementById('activity-list');
+
+    // Full-Scale Sampler Modal
+    this.samplerModal = document.getElementById('sampler-modal');
+    this.btnCloseSamplerModal = document.getElementById('btn-close-sampler-modal');
+    this.btnDoneSampling = document.getElementById('btn-done-sampling');
+    this.samplerFullImg = document.getElementById('sampler-full-img');
+    this.samplerCanvasWrapper = document.getElementById('sampler-canvas-wrapper');
+    this.magnifierLoupe = document.getElementById('magnifier-loupe');
+    this.loupeHex = document.getElementById('loupe-hex');
+    this.loupeCoords = document.getElementById('loupe-coords');
+    this.samplerSlotButtons = document.querySelectorAll('.btn-sample-slot');
 
     // Export Modal
     this.exportModal = document.getElementById('export-modal');
@@ -156,23 +191,13 @@ class App {
       }
     });
 
-    // Eyedropper API
-    this.btnEyedropper.addEventListener('click', () => this.activateEyedropper());
-
-    // Extraction Strategy Change
+    // Strategy Change
     this.strategySelect.addEventListener('change', () => {
       if (this.currentImage) {
         this.extractColorsFromImage(this.currentImage);
         this.showToast(`Extracted with ${this.strategySelect.options[this.strategySelect.selectedIndex].text}`);
       }
     });
-
-    // Role Color Pickers
-    this.pickerPrimary.addEventListener('input', (e) => this.engine.setRoleColor('primary', e.target.value));
-    this.pickerSecondary.addEventListener('input', (e) => this.engine.setRoleColor('secondary', e.target.value));
-    this.pickerAccent.addEventListener('input', (e) => this.engine.setRoleColor('accent', e.target.value));
-    this.pickerSurface.addEventListener('input', (e) => this.engine.setRoleColor('surface', e.target.value));
-    this.pickerBackground.addEventListener('input', (e) => this.engine.setRoleColor('background', e.target.value));
 
     // Sliders
     for (const [key, slider] of Object.entries(this.sliders)) {
@@ -193,6 +218,110 @@ class App {
       this.syncSlidersFromEngine();
       this.showToast('Adjustments reset to preset defaults.');
     });
+
+    // Interactive Preview Tabs
+    this.previewNavTabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        this.previewNavTabs.forEach((t) => t.classList.remove('active'));
+        tab.classList.add('active');
+        const targetTab = tab.dataset.tab;
+        this.tabPanels.forEach((panel) => {
+          panel.classList.toggle('active', panel.id === `tab-panel-${targetTab}`);
+        });
+      });
+    });
+
+    // Interactive Audio Player Toggle
+    this.playerToggleBtn.addEventListener('click', () => {
+      this.isPlayingAudio = !this.isPlayingAudio;
+      const iconPause = this.playerToggleBtn.querySelector('.icon-pause');
+      const iconPlay = this.playerToggleBtn.querySelector('.icon-play');
+
+      if (this.isPlayingAudio) {
+        iconPause.style.display = 'block';
+        iconPlay.style.display = 'none';
+        this.audioWaveform.classList.add('is-playing');
+        this.playerStatusBadge.textContent = 'Playing';
+      } else {
+        iconPause.style.display = 'none';
+        iconPlay.style.display = 'block';
+        this.audioWaveform.classList.remove('is-playing');
+        this.playerStatusBadge.textContent = 'Paused';
+      }
+    });
+
+    this.playerNextBtn.addEventListener('click', () => {
+      this.playerTrackTitle.textContent = 'Cybernetic Reflections • 96kHz';
+      this.showToast('Playing next track');
+    });
+
+    this.playerPrevBtn.addEventListener('click', () => {
+      this.playerTrackTitle.textContent = 'Atmospheric Synthwave • Lossless';
+      this.showToast('Playing previous track');
+    });
+
+    // Interactive Search Filtering
+    this.sampleSearch.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      const items = this.activityList.querySelectorAll('.activity-item');
+      items.forEach((item) => {
+        const text = item.textContent.toLowerCase();
+        item.style.display = text.includes(q) ? 'flex' : 'none';
+      });
+    });
+
+    // Filter Chips
+    this.filterChips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        this.filterChips.forEach((c) => c.classList.remove('active'));
+        chip.classList.add('active');
+        const cat = chip.dataset.filter;
+        const items = this.activityList.querySelectorAll('.activity-item');
+        items.forEach((item) => {
+          if (cat === 'all' || item.dataset.category === cat) {
+            item.style.display = 'flex';
+          } else {
+            item.style.display = 'none';
+          }
+        });
+      });
+    });
+
+    // Deploy Theme Interactive Feedback
+    this.previewPrimaryBtn.addEventListener('click', () => {
+      this.btnDeployText.textContent = 'Deploying...';
+      this.previewPrimaryBtn.style.opacity = '0.75';
+      setTimeout(() => {
+        this.btnDeployText.textContent = 'Deployed ✓';
+        this.previewPrimaryBtn.style.opacity = '1';
+        this.showToast('Theme tokens deployed to virtual edge CDN! 🚀');
+        setTimeout(() => {
+          this.btnDeployText.textContent = 'Deploy Theme';
+        }, 2500);
+      }, 700);
+    });
+
+    // Full-Scale Precision Sampler Modal
+    this.btnOpenFullSampler.addEventListener('click', () => this.openSamplerModal(this.targetSamplingSlot));
+    this.btnCloseSamplerModal.addEventListener('click', () => this.closeSamplerModal());
+    this.btnDoneSampling.addEventListener('click', () => this.closeSamplerModal());
+    this.samplerModal.addEventListener('click', (e) => {
+      if (e.target === this.samplerModal) this.closeSamplerModal();
+    });
+
+    this.samplerSlotButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const slotIdx = parseInt(btn.dataset.slot, 10);
+        this.setTargetSamplingSlot(slotIdx);
+      });
+    });
+
+    // Full Image Mouse Events for Loupe and Sampling
+    this.samplerCanvasWrapper.addEventListener('mousemove', (e) => this.handleSamplerMouseMove(e));
+    this.samplerCanvasWrapper.addEventListener('mouseleave', () => {
+      this.magnifierLoupe.style.display = 'none';
+    });
+    this.samplerCanvasWrapper.addEventListener('click', (e) => this.handleSamplerClick(e));
 
     // Export Modal
     this.btnOpenExport.addEventListener('click', () => this.openExportModal());
@@ -276,9 +405,17 @@ class App {
     try {
       this.engine.setWallpaper(url);
       if (this.mediaCardImg) this.mediaCardImg.src = url;
+      if (this.samplerFullImg) this.samplerFullImg.src = url;
 
       const img = await this.extractor.loadImage(url);
       this.currentImage = img;
+
+      // Draw to full-scale uncompressed canvas
+      this.fullCanvas.width = img.naturalWidth || img.width;
+      this.fullCanvas.height = img.naturalHeight || img.height;
+      this.fullCtx.clearRect(0, 0, this.fullCanvas.width, this.fullCanvas.height);
+      this.fullCtx.drawImage(img, 0, 0);
+
       this.extractColorsFromImage(img);
 
       if (recommendedPreset && THEME_PRESETS[recommendedPreset]) {
@@ -312,67 +449,222 @@ class App {
     }
   }
 
-  async activateEyedropper() {
-    if ('EyeDropper' in window) {
-      try {
-        const eyeDropper = new window.EyeDropper();
-        const result = await eyeDropper.open();
-        if (result && result.sRGBHex) {
-          const pickedHex = result.sRGBHex.toUpperCase();
-          this.engine.setRoleColor('primary', pickedHex);
-          this.showToast(`Sampled ${pickedHex} as Primary Accent!`);
-        }
-      } catch (e) {
-        // User cancelled eyedropper
-      }
-    } else {
-      // Fallback: prompt or sample center pixel
-      if (this.currentImage) {
-        const sampled = this.extractor.samplePixel(this.currentImage, 0.5, 0.5);
-        this.engine.setRoleColor('primary', sampled.hex);
-        this.showToast(`Sampled ${sampled.hex} from image center!`);
-      } else {
-        this.showToast('EyeDropper API is not supported in this browser.');
-      }
+  extractColorsFromImage(img) {
+    const strategy = this.strategySelect.value;
+    const { pixels } = this.extractor.getPixels(img);
+    
+    // Chromatic Mood Analysis
+    const moodAnalysis = this.extractor.analyzeImageMood(pixels);
+    this.moodText.textContent = `${moodAnalysis.mood.toUpperCase()} (${moodAnalysis.rationale.split(' ')[0]})`;
+
+    const colors = this.extractor.extract(img, strategy, 6);
+    this.engine.setPalette(colors, moodAnalysis);
+    this.renderUniformPaletteSlots();
+  }
+
+  /* ==========================================================================
+     Item 2: UNIFORM 6-SLOT MATRIX WITH INDIVIDUAL PRECISION SAMPLING
+     ========================================================================== */
+
+  renderUniformPaletteSlots() {
+    this.uniformPaletteGrid.innerHTML = '';
+    this.rolesConfigPanel.innerHTML = '';
+
+    const slots = this.engine.colorSlots;
+
+    slots.forEach((slot, idx) => {
+      // 1. Uniform Grid Card
+      const card = document.createElement('div');
+      card.className = 'slot-card';
+
+      card.innerHTML = `
+        <div class="slot-box ${idx === this.targetSamplingSlot ? 'is-sampling-target' : ''}" style="background-color: ${slot.hex};" data-slot="${idx}">
+          <span class="slot-tag">S${idx + 1}: ${slot.label.split(' ')[0]}</span>
+          <button class="btn-slot-sample" data-slot="${idx}" title="Precision sample pixel for ${slot.label}">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m2 22 1-1h3l9-9"/><path d="M14 6l4 4"/><circle cx="18" cy="6" r="3"/></svg>
+          </button>
+        </div>
+        <div class="slot-meta-row">
+          <span class="slot-hex-text font-mono">${slot.hex}</span>
+        </div>
+      `;
+
+      // Swatch Click: select slot and open color picker
+      const slotBox = card.querySelector('.slot-box');
+      const sampleBtn = card.querySelector('.btn-slot-sample');
+
+      slotBox.addEventListener('click', (e) => {
+        if (e.target.closest('.btn-slot-sample')) return;
+        this.setTargetSamplingSlot(idx);
+        // Trigger color input
+        const picker = document.getElementById(`role-picker-${idx}`);
+        if (picker) picker.click();
+      });
+
+      sampleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.setTargetSamplingSlot(idx);
+        this.openSamplerModal(idx);
+      });
+
+      this.uniformPaletteGrid.appendChild(card);
+
+      // 2. Role Configuration Row
+      const row = document.createElement('div');
+      row.className = 'role-row';
+      row.innerHTML = `
+        <span class="role-label">
+          <span class="role-pill" style="background: ${slot.hex};"></span>
+          <span>Slot ${idx + 1}: ${slot.label}</span>
+        </span>
+        <div class="role-color-input-wrapper">
+          <input type="color" class="color-input-preview" id="role-picker-${idx}" value="${slot.hex}" />
+          <span class="font-mono" style="font-size:0.75rem; color:var(--studio-text-secondary);">${slot.hex}</span>
+        </div>
+      `;
+
+      const pickerInput = row.querySelector('.color-input-preview');
+      pickerInput.addEventListener('input', (e) => {
+        this.engine.setSlotColor(idx, e.target.value);
+      });
+
+      this.rolesConfigPanel.appendChild(row);
+    });
+
+    this.activeTargetSlotIndicator.textContent = `Target: Slot ${this.targetSamplingSlot + 1} (${slots[this.targetSamplingSlot]?.label.split(' ')[0] || ''})`;
+  }
+
+  setTargetSamplingSlot(slotIdx) {
+    this.targetSamplingSlot = slotIdx;
+    const slots = this.engine.colorSlots;
+    this.activeTargetSlotIndicator.textContent = `Target: Slot ${slotIdx + 1} (${slots[slotIdx]?.label.split(' ')[0] || ''})`;
+
+    document.querySelectorAll('.slot-box').forEach((box, i) => {
+      box.classList.toggle('is-sampling-target', i === slotIdx);
+    });
+
+    this.samplerSlotButtons.forEach((btn, i) => {
+      btn.classList.toggle('active', i === slotIdx);
+    });
+  }
+
+  /* ==========================================================================
+     Item 3: FULL-SCALE PRECISION COLOR SAMPLER MODAL WITH LOUPE
+     ========================================================================== */
+
+  initSamplerLoupe() {
+    this.loupeCanvas = document.getElementById('loupe-canvas');
+    if (this.loupeCanvas) {
+      this.loupeCtx = this.loupeCanvas.getContext('2d', { willReadFrequently: true });
     }
   }
 
-  extractColorsFromImage(img) {
-    const strategy = this.strategySelect.value;
-    const colors = this.extractor.extract(img, strategy, 6);
-    this.renderPaletteSwatches(colors);
-    this.engine.setPalette(colors);
+  openSamplerModal(slotIdx = 0) {
+    this.setTargetSamplingSlot(slotIdx);
+    if (this.currentImage) {
+      this.samplerFullImg.src = this.currentImage.src;
+    }
+    this.samplerModal.classList.add('open');
   }
 
-  renderPaletteSwatches(colors) {
-    this.paletteGrid.innerHTML = '';
-    this.swatchCountTag.textContent = `${colors.length} Colors`;
+  closeSamplerModal() {
+    this.samplerModal.classList.remove('open');
+    this.magnifierLoupe.style.display = 'none';
+  }
 
-    const roles = ['primary', 'secondary', 'accent', 'surface', 'background'];
+  handleSamplerMouseMove(e) {
+    if (!this.currentImage || !this.loupeCtx) return;
 
-    colors.forEach((color, idx) => {
-      const card = document.createElement('div');
-      card.className = 'color-swatch-card';
-      card.title = `Hex: ${color.hex}\nRGB: rgb(${color.rgb.join(', ')})\nClick to set as Primary or copy`;
+    const img = this.samplerFullImg;
+    const rect = img.getBoundingClientRect();
 
-      const roleTag = idx === 0 ? 'Primary' : idx === 1 ? 'Secondary' : idx === 2 ? 'Accent' : idx === 3 ? 'Surface' : idx === 4 ? 'Bg' : 'Tone';
+    if (
+      e.clientX < rect.left ||
+      e.clientX > rect.right ||
+      e.clientY < rect.top ||
+      e.clientY > rect.bottom
+    ) {
+      this.magnifierLoupe.style.display = 'none';
+      return;
+    }
 
-      card.innerHTML = `
-        <div class="swatch-box ${idx === 0 ? 'selected' : ''}" style="background-color: ${color.hex};"></div>
-        <span class="swatch-hex font-mono">${color.hex}</span>
-        <span class="swatch-role-tag ${idx === 0 ? 'primary' : ''}">${roleTag}</span>
-      `;
+    const naturalW = img.naturalWidth || this.fullCanvas.width;
+    const naturalH = img.naturalHeight || this.fullCanvas.height;
 
-      card.addEventListener('click', () => {
-        document.querySelectorAll('.swatch-box').forEach((s) => s.classList.remove('selected'));
-        card.querySelector('.swatch-box').classList.add('selected');
-        this.engine.setRoleColor('primary', color.hex);
-        navigator.clipboard?.writeText(color.hex);
-        this.showToast(`Assigned ${color.hex} as Primary & copied to clipboard!`);
-      });
+    const relX = (e.clientX - rect.left) / rect.width;
+    const relY = (e.clientY - rect.top) / rect.height;
 
-      this.paletteGrid.appendChild(card);
-    });
+    const pixelX = Math.max(0, Math.min(naturalW - 1, Math.round(relX * naturalW)));
+    const pixelY = Math.max(0, Math.min(naturalH - 1, Math.round(relY * naturalH)));
+
+    // Sample pixel from full-scale uncompressed canvas
+    const pixelData = this.fullCtx.getImageData(pixelX, pixelY, 1, 1).data;
+    const hex = this.extractor.rgbToHex(pixelData[0], pixelData[1], pixelData[2]);
+
+    // Render Loupe (5x magnification of 16x16 pixel area around cursor)
+    const loupeRadius = 8;
+    const sampleX = Math.max(0, Math.min(naturalW - loupeRadius * 2, pixelX - loupeRadius));
+    const sampleY = Math.max(0, Math.min(naturalH - loupeRadius * 2, pixelY - loupeRadius));
+
+    this.loupeCtx.imageSmoothingEnabled = false;
+    this.loupeCtx.clearRect(0, 0, 80, 80);
+    this.loupeCtx.drawImage(
+      this.fullCanvas,
+      sampleX,
+      sampleY,
+      loupeRadius * 2,
+      loupeRadius * 2,
+      0,
+      0,
+      80,
+      80
+    );
+
+    // Position loupe near mouse
+    const wrapperRect = this.samplerCanvasWrapper.getBoundingClientRect();
+    const loupeX = e.clientX - wrapperRect.left + 15;
+    const loupeY = e.clientY - wrapperRect.top - 120;
+
+    this.magnifierLoupe.style.left = `${loupeX}px`;
+    this.magnifierLoupe.style.top = `${loupeY}px`;
+    this.magnifierLoupe.style.display = 'block';
+
+    this.loupeHex.textContent = hex;
+    this.loupeCoords.textContent = `X: ${pixelX} Y: ${pixelY}`;
+  }
+
+  handleSamplerClick(e) {
+    if (!this.currentImage) return;
+
+    const img = this.samplerFullImg;
+    const rect = img.getBoundingClientRect();
+
+    if (
+      e.clientX < rect.left ||
+      e.clientX > rect.right ||
+      e.clientY < rect.top ||
+      e.clientY > rect.bottom
+    ) {
+      return;
+    }
+
+    const naturalW = img.naturalWidth || this.fullCanvas.width;
+    const naturalH = img.naturalHeight || this.fullCanvas.height;
+
+    const relX = (e.clientX - rect.left) / rect.width;
+    const relY = (e.clientY - rect.top) / rect.height;
+
+    const pixelX = Math.max(0, Math.min(naturalW - 1, Math.round(relX * naturalW)));
+    const pixelY = Math.max(0, Math.min(naturalH - 1, Math.round(relY * naturalH)));
+
+    const sampled = this.extractor.samplePixelExact(this.fullCanvas, pixelX, pixelY);
+    const targetIdx = this.targetSamplingSlot;
+
+    this.engine.setSlotColor(targetIdx, sampled.hex);
+    this.renderUniformPaletteSlots();
+
+    const slotLabel = this.engine.colorSlots[targetIdx]?.label || `Slot ${targetIdx + 1}`;
+    this.showToast(`Sampled ${sampled.hex} at [${pixelX}, ${pixelY}] into ${slotLabel}! ✨`);
   }
 
   updateSliderDisplay(key, val) {
@@ -407,29 +699,20 @@ class App {
   }
 
   handleThemeUpdate({ tokens, audit, state }) {
-    // 1. Update Role Pickers and Labels
-    this.pickerPrimary.value = state.colorRoles.primary;
-    this.hexPrimary.textContent = state.colorRoles.primary;
-
-    this.pickerSecondary.value = state.colorRoles.secondary;
-    this.hexSecondary.textContent = state.colorRoles.secondary;
-
-    this.pickerAccent.value = state.colorRoles.accent;
-    this.hexAccent.textContent = state.colorRoles.accent;
-
-    this.pickerSurface.value = state.colorRoles.surface;
-    this.hexSurface.textContent = state.colorRoles.surface;
-
-    this.pickerBackground.value = state.colorRoles.background;
-    this.hexBackground.textContent = state.colorRoles.background;
-
-    // 2. Update Accessibility Auditor UI
     this.renderAuditResults(audit);
 
-    // 3. Update active preset card styling
+    // Update active preset cards
     document.querySelectorAll('.preset-card').forEach((c) => {
       c.classList.toggle('active', c.dataset.id === state.activePresetId);
     });
+
+    // Update heading gradient
+    if (this.previewHeadingHighlight && tokens['--theme-heading-gradient']) {
+      this.previewHeadingHighlight.style.background = tokens['--theme-heading-gradient'];
+    }
+
+    // Refresh slots
+    this.renderUniformPaletteSlots();
   }
 
   renderAuditResults(audit) {
@@ -457,7 +740,6 @@ class App {
       this.auditItemsList.appendChild(row);
     });
 
-    // Overall badge
     if (passCount === items.length) {
       this.overallWcagBadge.className = 'audit-badge contrast-aaa';
       this.overallWcagBadge.textContent = 'WCAG AAA / AA Valid';
@@ -553,7 +835,6 @@ class App {
   }
 }
 
-// Instantiate on DOM load
 window.addEventListener('DOMContentLoaded', () => {
   window.app = new App();
 });

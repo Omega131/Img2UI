@@ -25,6 +25,17 @@ export class ThemeEngine {
     };
 
     this.activePresetId = 'vibrant';
+    
+    // 6 semantic color slots
+    this.colorSlots = [
+      { id: 0, role: 'primary', label: 'Primary Accent', hex: '#06B6D4' },
+      { id: 1, role: 'secondary', label: 'Secondary Tone', hex: '#8B5CF6' },
+      { id: 2, role: 'accent', label: 'Accent Pop', hex: '#F43F5E' },
+      { id: 3, role: 'surface', label: 'Card Surface', hex: '#151D2F' },
+      { id: 4, role: 'background', label: 'Canvas Background', hex: '#0B0F19' },
+      { id: 5, role: 'text', label: 'Highlight / Text', hex: '#E2E8F0' }
+    ];
+
     this.colorRoles = {
       primary: '#06B6D4',
       secondary: '#8B5CF6',
@@ -37,12 +48,10 @@ export class ThemeEngine {
 
     this.rawPalette = [];
     this.currentWallpaperUrl = '/wallpapers/cyberpunk.jpg';
+    this.imageAnalysis = null;
     this.listeners = [];
   }
 
-  /**
-   * Subscribe to theme updates
-   */
   onChange(fn) {
     this.listeners.push(fn);
   }
@@ -50,9 +59,10 @@ export class ThemeEngine {
   notify() {
     const tokens = this.getTokens();
     const audit = this.contrastChecker.auditTheme(tokens);
+    const state = this.getState();
     for (const fn of this.listeners) {
       try {
-        fn({ tokens, audit, state: this.getState() });
+        fn({ tokens, audit, state });
       } catch (err) {
         console.error('Theme listener error:', err);
       }
@@ -64,29 +74,24 @@ export class ThemeEngine {
       activePresetId: this.activePresetId,
       adjustments: { ...this.adjustments },
       colorRoles: { ...this.colorRoles },
+      colorSlots: this.colorSlots.map((s) => ({ ...s })),
       rawPalette: [...this.rawPalette],
-      wallpaperUrl: this.currentWallpaperUrl
+      wallpaperUrl: this.currentWallpaperUrl,
+      imageAnalysis: this.imageAnalysis
     };
   }
 
-  /**
-   * Set wallpaper image
-   */
   setWallpaper(url) {
     this.currentWallpaperUrl = url;
     this.applyToDOM();
     this.notify();
   }
 
-  /**
-   * Set active preset mood
-   */
   setPreset(presetId) {
     if (!THEME_PRESETS[presetId]) return;
     this.activePresetId = presetId;
     const preset = THEME_PRESETS[presetId];
 
-    // Apply preset baseline adjustments if appropriate
     if (preset.config) {
       if (preset.config.backgroundBlur !== undefined) {
         this.adjustments.blur = preset.config.backgroundBlur;
@@ -106,9 +111,6 @@ export class ThemeEngine {
     this.notify();
   }
 
-  /**
-   * Update individual visual adjustment
-   */
   setAdjustment(key, value) {
     if (this.adjustments[key] !== undefined) {
       this.adjustments[key] = Number(value);
@@ -117,9 +119,6 @@ export class ThemeEngine {
     }
   }
 
-  /**
-   * Reset adjustments to preset defaults
-   */
   resetAdjustments() {
     const preset = THEME_PRESETS[this.activePresetId] || THEME_PRESETS.vibrant;
     this.adjustments = {
@@ -137,21 +136,15 @@ export class ThemeEngine {
     this.notify();
   }
 
-  /**
-   * Map raw extracted colors into semantic roles
-   */
-  setPalette(extractedColors) {
+  setPalette(extractedColors, imageAnalysis = null) {
     this.rawPalette = extractedColors;
+    this.imageAnalysis = imageAnalysis;
     if (!extractedColors || extractedColors.length === 0) return;
 
-    // Pick colors based on vibrancy, luminance, and contrast
     const sorted = [...extractedColors];
 
-    // Primary: Choose highest vibrancy or most representative accent
     const primaryCandidate = sorted[0]?.hex || '#06B6D4';
-    // Secondary: Choose 2nd distinct color
     const secondaryCandidate = sorted[1]?.hex || sorted[0]?.hex || '#8B5CF6';
-    // Accent: Choose 3rd or distinct pop
     const accentCandidate = sorted[2]?.hex || sorted[1]?.hex || '#F43F5E';
 
     // Surface / Background: Find darkest or most muted color for base canvas
@@ -162,10 +155,8 @@ export class ThemeEngine {
     });
 
     const bgCandidate = darkCandidates[0]?.hex || '#0B0F19';
-    // Surface: slightly lighter than background or second darkest
     let surfaceCandidate = darkCandidates[1]?.hex || '#151D2F';
 
-    // Ensure surface is sufficiently distinct from background
     if (this.extractor.getContrastRatio(surfaceCandidate, bgCandidate) < 1.15) {
       const [r, g, b] = this.extractor.hexToRgb(bgCandidate);
       const [h, s, l] = this.extractor.rgbToHsl(r, g, b);
@@ -174,61 +165,82 @@ export class ThemeEngine {
       surfaceCandidate = this.extractor.rgbToHex(sr, sg, sb);
     }
 
+    const textCandidate = sorted[5]?.hex || sorted[4]?.hex || '#E2E8F0';
+
+    // Update slots
+    this.colorSlots[0].hex = primaryCandidate;
+    this.colorSlots[1].hex = secondaryCandidate;
+    this.colorSlots[2].hex = accentCandidate;
+    this.colorSlots[3].hex = surfaceCandidate;
+    this.colorSlots[4].hex = bgCandidate;
+    this.colorSlots[5].hex = textCandidate;
+
+    // Update roles
     this.colorRoles.primary = primaryCandidate;
     this.colorRoles.secondary = secondaryCandidate;
     this.colorRoles.accent = accentCandidate;
-    this.colorRoles.background = bgCandidate;
     this.colorRoles.surface = surfaceCandidate;
+    this.colorRoles.background = bgCandidate;
 
     this.applyToDOM();
     this.notify();
   }
 
-  /**
-   * Set specific role color manually (e.g. from picker or swatch click)
-   */
-  setRoleColor(role, hex) {
-    if (this.colorRoles[role] !== undefined) {
-      this.colorRoles[role] = hex;
+  setSlotColor(slotIndex, hex) {
+    if (this.colorSlots[slotIndex]) {
+      this.colorSlots[slotIndex].hex = hex;
+
+      if (slotIndex === 0) this.colorRoles.primary = hex;
+      else if (slotIndex === 1) this.colorRoles.secondary = hex;
+      else if (slotIndex === 2) this.colorRoles.accent = hex;
+      else if (slotIndex === 3) this.colorRoles.surface = hex;
+      else if (slotIndex === 4) this.colorRoles.background = hex;
+
       this.applyToDOM();
       this.notify();
     }
   }
 
-  /**
-   * Auto-optimize theme for guaranteed WCAG AA / AAA contrast
-   */
+  setRoleColor(role, hex) {
+    if (this.colorRoles[role] !== undefined) {
+      this.colorRoles[role] = hex;
+
+      // Sync to slots
+      const slotMap = { primary: 0, secondary: 1, accent: 2, surface: 3, background: 4 };
+      if (slotMap[role] !== undefined) {
+        this.colorSlots[slotMap[role]].hex = hex;
+      }
+
+      this.applyToDOM();
+      this.notify();
+    }
+  }
+
   autoOptimizeContrast() {
-    // 1. Optimize Primary Button text vs Primary color
     const optimalPrimaryText = this.extractor.getOptimalTextColor(this.colorRoles.primary).text;
     this.colorRoles.textPrimary = optimalPrimaryText;
 
-    // 2. Ensure Surface has at least 4.5:1 contrast against headings
     const headingCandidate = '#FFFFFF';
     const surfaceHex = this.colorRoles.surface;
     const ratio = this.extractor.getContrastRatio(headingCandidate, surfaceHex);
 
     if (ratio < 4.5) {
-      // Darken surface
       const [r, g, b] = this.extractor.hexToRgb(surfaceHex);
       let [h, s, l] = this.extractor.rgbToHsl(r, g, b);
       l = Math.max(0.08, l - 0.12);
       const [nr, ng, nb] = this.extractor.hslToRgb(h, s, l);
       this.colorRoles.surface = this.extractor.rgbToHex(nr, ng, nb);
+      this.colorSlots[3].hex = this.colorRoles.surface;
     }
 
     this.applyToDOM();
     this.notify();
   }
 
-  /**
-   * Compute full set of CSS Custom Properties based on current state & adjustments
-   */
   getTokens() {
     const preset = THEME_PRESETS[this.activePresetId] || THEME_PRESETS.vibrant;
     const adj = this.adjustments;
 
-    // Apply adjustments to core colors
     const adjOptions = {
       saturation: adj.saturation * (preset.config.saturationMultiplier || 1.0),
       brightness: adj.brightness,
@@ -241,60 +253,92 @@ export class ThemeEngine {
     const accent = this.extractor.adjustColor(this.colorRoles.accent, adjOptions);
     const background = this.extractor.adjustColor(this.colorRoles.background, {
       ...adjOptions,
-      brightness: Math.max(20, adjOptions.brightness * 0.7) // Keep bg deep & rich
+      brightness: Math.max(16, adjOptions.brightness * 0.65)
     });
     const surfaceSolid = this.extractor.adjustColor(this.colorRoles.surface, {
       ...adjOptions,
-      brightness: Math.max(30, adjOptions.brightness * 0.85)
+      brightness: Math.max(26, adjOptions.brightness * 0.8)
     });
 
-    // RGB splits for alpha compositing
     const [pr, pg, pb] = this.extractor.hexToRgb(primary);
     const [sr, sg, sb] = this.extractor.hexToRgb(secondary);
     const [ar, ag, ab] = this.extractor.hexToRgb(accent);
     const [bgr, bgg, bgb] = this.extractor.hexToRgb(background);
     const [sfr, sfg, sfb] = this.extractor.hexToRgb(surfaceSolid);
 
-    // Optimal readable text colors for each button / surface
     const primaryTextInfo = this.extractor.getOptimalTextColor(primary);
     const secondaryTextInfo = this.extractor.getOptimalTextColor(secondary);
     const accentTextInfo = this.extractor.getOptimalTextColor(accent);
 
-    // Surface text contrast
     const surfaceLum = this.extractor.getRelativeLuminance(sfr, sfg, sfb);
     const isDarkSurface = surfaceLum < 0.35;
 
-    const textPrimary = isDarkSurface ? '#FFFFFF' : '#0B0F19';
-    const textSecondary = isDarkSurface ? 'rgba(255, 255, 255, 0.75)' : 'rgba(15, 23, 42, 0.75)';
-    const textMuted = isDarkSurface ? 'rgba(255, 255, 255, 0.48)' : 'rgba(15, 23, 42, 0.48)';
+    const textPrimary = isDarkSurface ? '#FFFFFF' : '#090D16';
+    const textSecondary = isDarkSurface ? 'rgba(255, 255, 255, 0.78)' : 'rgba(15, 23, 42, 0.78)';
+    const textMuted = isDarkSurface ? 'rgba(255, 255, 255, 0.50)' : 'rgba(15, 23, 42, 0.50)';
 
-    // Surface alpha & border
     const surfaceAlpha = adj.surfaceOpacity / 100;
     const surfaceRgba = `rgba(${sfr}, ${sfg}, ${sfb}, ${surfaceAlpha.toFixed(2)})`;
     const surfaceHoverRgba = `rgba(${Math.min(255, sfr + 12)}, ${Math.min(255, sfg + 12)}, ${Math.min(255, sfb + 12)}, ${(surfaceAlpha + 0.05).toFixed(2)})`;
 
-    // Border color depending on glass / minimal preset
-    const borderAlpha = preset.id === 'glass' ? 0.28 : preset.id === 'minimal' ? 0.12 : 0.18;
-    const surfaceBorder = isDarkSurface
+    const borderAlpha = preset.id === 'glass' ? 0.32 : preset.id === 'minimal' ? 0.12 : preset.id === 'cyberpunk' ? 0.55 : 0.2;
+    const surfaceBorder = preset.id === 'cyberpunk'
+      ? `rgba(${pr}, ${pg}, ${pb}, 0.55)`
+      : isDarkSurface
       ? `rgba(255, 255, 255, ${borderAlpha})`
       : `rgba(0, 0, 0, ${borderAlpha})`;
 
-    const primaryBorder = `rgba(${pr}, ${pg}, ${pb}, 0.45)`;
+    const primaryBorder = `rgba(${pr}, ${pg}, ${pb}, 0.6)`;
 
-    // Glow and shadows
     const glowScale = adj.glowIntensity / 100;
     const cardGlow = glowScale > 0.05
-      ? `0 0 ${(30 * glowScale).toFixed(0)}px rgba(${pr}, ${pg}, ${pb}, ${(0.25 * glowScale).toFixed(2)})`
+      ? `0 0 ${(32 * glowScale).toFixed(0)}px rgba(${pr}, ${pg}, ${pb}, ${(0.28 * glowScale).toFixed(2)})`
       : 'none';
     const primaryGlow = glowScale > 0.05
-      ? `0 8px 24px -4px rgba(${pr}, ${pg}, ${pb}, ${(0.45 * glowScale).toFixed(2)})`
+      ? `0 8px 24px -4px rgba(${pr}, ${pg}, ${pb}, ${(0.5 * glowScale).toFixed(2)})`
       : 'none';
 
-    // Primary hover calculation
+    // Hover calculation
     const [ph, ps, pl] = this.extractor.rgbToHsl(pr, pg, pb);
     const hoverL = pl > 0.5 ? Math.max(0, pl - 0.08) : Math.min(1, pl + 0.08);
     const [hr, hg, hb] = this.extractor.hslToRgb(ph, ps, hoverL);
     const primaryHover = this.extractor.rgbToHex(hr, hg, hb);
+
+    // Dynamic Heading Gradient depending on preset and extracted colors
+    let headingGradient = `linear-gradient(135deg, ${primary} 0%, ${accent} 100%)`;
+    let headingFont = `'Plus Jakarta Sans', sans-serif`;
+    let headingLetterSpacing = '-0.03em';
+    let headingTransform = 'none';
+
+    if (preset.id === 'minimal') {
+      headingGradient = `linear-gradient(135deg, ${primary} 0%, ${primary} 100%)`; // Crisp solid monochrome accent
+      headingFont = `'Inter', sans-serif`;
+      headingLetterSpacing = '-0.01em';
+    } else if (preset.id === 'vibrant') {
+      headingGradient = `linear-gradient(135deg, ${primary} 0%, ${secondary} 50%, ${accent} 100%)`;
+      headingFont = `'Plus Jakarta Sans', sans-serif`;
+      headingLetterSpacing = '-0.03em';
+    } else if (preset.id === 'warm') {
+      headingGradient = `linear-gradient(135deg, ${primary} 0%, #F59E0B 45%, ${accent} 100%)`;
+      headingFont = `'Plus Jakarta Sans', sans-serif`;
+      headingLetterSpacing = '-0.02em';
+    } else if (preset.id === 'cool') {
+      headingGradient = `linear-gradient(135deg, ${primary} 0%, #38BDF8 55%, ${secondary} 100%)`;
+      headingFont = `'Inter', sans-serif`;
+      headingLetterSpacing = '-0.02em';
+    } else if (preset.id === 'glass') {
+      headingGradient = `linear-gradient(135deg, #FFFFFF 0%, ${primary} 50%, ${accent} 100%)`;
+      headingFont = `'Plus Jakarta Sans', sans-serif`;
+      headingLetterSpacing = '-0.02em';
+    } else if (preset.id === 'cyberpunk') {
+      headingGradient = `linear-gradient(90deg, ${primary} 0%, #EC4899 50%, ${accent} 100%)`;
+      headingFont = `'JetBrains Mono', monospace`;
+      headingLetterSpacing = '0.04em';
+      headingTransform = 'uppercase';
+    } else if (preset.id === 'neumorphic') {
+      headingGradient = `linear-gradient(180deg, ${textPrimary} 20%, ${primary} 100%)`;
+      headingFont = `'Plus Jakarta Sans', sans-serif`;
+    }
 
     return {
       '--theme-primary': primary,
@@ -341,13 +385,16 @@ export class ThemeEngine {
       '--theme-primary-glow': primaryGlow,
       '--theme-shadow': preset.config.shadowStyle || '0 8px 30px rgba(0, 0, 0, 0.25)',
 
-      '--theme-wallpaper': `url("${this.currentWallpaperUrl}")`
+      '--theme-wallpaper': `url("${this.currentWallpaperUrl}")`,
+
+      // Dynamic Heading & Typography
+      '--theme-heading-gradient': headingGradient,
+      '--theme-heading-font': headingFont,
+      '--theme-heading-letter-spacing': headingLetterSpacing,
+      '--theme-heading-transform': headingTransform
     };
   }
 
-  /**
-   * Apply calculated CSS variables to live document elements
-   */
   applyToDOM() {
     const tokens = this.getTokens();
     const previewEl = document.getElementById('preview-container') || document.documentElement;
@@ -355,6 +402,10 @@ export class ThemeEngine {
     for (const [key, val] of Object.entries(tokens)) {
       previewEl.style.setProperty(key, val);
       document.documentElement.style.setProperty(key, val);
+    }
+
+    if (previewEl && previewEl.dataset) {
+      previewEl.dataset.themePreset = this.activePresetId;
     }
   }
 }
