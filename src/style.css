@@ -272,17 +272,29 @@ code, pre, .font-mono {
   .studio-main {
     grid-template-columns: 1fr;
   }
+
+  .studio-sidebar {
+    height: auto !important;
+    max-height: none !important;
+    min-height: unset !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--studio-border);
+    border-bottom-right-radius: 0 !important;
+  }
 }
 
 .studio-sidebar {
   background: var(--studio-surface);
   border-right: 1px solid var(--studio-border);
+  border-bottom: 1px solid var(--studio-border);
+  border-bottom-right-radius: var(--studio-radius);
   overflow-y: auto;
-  max-height: calc(100vh - 64px);
+  min-height: 850px;
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1), max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .studio-card {

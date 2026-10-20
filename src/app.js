@@ -42,10 +42,14 @@ class App {
 
     // Load initial sample wallpaper
     this.loadWallpaper(SAMPLE_WALLPAPERS[0].url, SAMPLE_WALLPAPERS[0].recommendedPreset);
+
+    // Initial sidebar length sync with mockup
+    this.syncSidebarLength();
   }
 
   initDOMReferences() {
     // Header & Global
+    this.studioSidebar = document.getElementById('studio-sidebar');
     this.vpDesktop = document.getElementById('vp-btn-desktop');
     this.vpTablet = document.getElementById('vp-btn-tablet');
     this.vpMobile = document.getElementById('vp-btn-mobile');
@@ -228,6 +232,7 @@ class App {
         this.tabPanels.forEach((panel) => {
           panel.classList.toggle('active', panel.id === `tab-panel-${targetTab}`);
         });
+        requestAnimationFrame(() => this.syncSidebarLength());
       });
     });
 
@@ -341,6 +346,15 @@ class App {
 
     this.btnCopyCode.addEventListener('click', () => this.copyExportCode());
     this.btnDownloadFile.addEventListener('click', () => this.downloadExportFile());
+
+    // Auto-sync sidebar length to align with mockup edge on resize
+    window.addEventListener('resize', () => this.syncSidebarLength());
+    if (window.ResizeObserver && this.previewContainer) {
+      this.containerResizeObserver = new ResizeObserver(() => {
+        this.syncSidebarLength();
+      });
+      this.containerResizeObserver.observe(this.previewContainer);
+    }
   }
 
   setViewportMode(mode) {
@@ -350,6 +364,22 @@ class App {
     this.vpDesktop.classList.toggle('active', mode === 'desktop');
     this.vpTablet.classList.toggle('active', mode === 'tablet');
     this.vpMobile.classList.toggle('active', mode === 'mobile');
+
+    // Dynamically adjust sidebar length to align with mockup's new dimensions
+    setTimeout(() => this.syncSidebarLength(), 50);
+  }
+
+  syncSidebarLength() {
+    if (!this.studioSidebar || !this.previewContainer) return;
+    if (window.innerWidth > 1080) {
+      // Calculate target height so that the bottom of the scrolling sidebar perfectly aligns with the mockup's bottom edge
+      const targetHeight = this.previewContainer.offsetTop + this.previewContainer.offsetHeight;
+      this.studioSidebar.style.height = `${targetHeight}px`;
+      this.studioSidebar.style.maxHeight = `${targetHeight}px`;
+    } else {
+      this.studioSidebar.style.height = '';
+      this.studioSidebar.style.maxHeight = '';
+    }
   }
 
   renderWallpapers() {
