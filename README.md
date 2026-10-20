@@ -1,7 +1,8 @@
-<h1 align="center">🖼️ Img2UI</h1>
+<h1 align="center">Img2UI</h1>
 
 <p align="center">
-  <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='100' height='100' fill='none' stroke='%2306B6D4' stroke-width='1.8'%3E%3Ccircle cx='12' cy='12' r='10' stroke='%2306B6D4'/%3E%3Cpath d='m4.93 4.93 4.24 4.24' stroke='%2338BDF8'/%3E%3Cpath d='m14.83 9.17 4.24-4.24' stroke='%2338BDF8'/%3E%3Cpath d='m14.83 14.83 4.24 4.24' stroke='%2338BDF8'/%3E%3Cpath d='m9.17 14.83-4.24 4.24' stroke='%2338BDF8'/%3E%3Ccircle cx='12' cy='12' r='4' fill='%2306B6D4' fill-opacity='0.25' stroke='%2306B6D4' stroke-width='2'/%3E%3C/svg%3E" alt="Img2UI Logo" width="100" />
+  <img width="2752" height="1536" alt="Gemini_Generated_Image_7m4qjq7m4qjq7m4q" src="https://github.com/user-attachments/assets/7e930427-8435-49d5-8c15-5c409ca39bea" />
+
 </p>
 
 <h2 align="center"><strong>Intelligent Wallpaper-to-Design System Generator & Real-Time Theming Studio.</strong><br> Extract harmonious 6-slot color roles, compile reactive design tokens, and audit WCAG AA/AAA accessibility in real-time.</h2>
@@ -146,9 +147,13 @@ flowchart TD
 
 ---
 
-## Demo Video & Walkthrough
+## Demo Video & Deployment
 
-[[Watch Video Walkthrough]](https://youtube.com) &nbsp;|&nbsp; [Deployed Site (Live on GitHub Pages)](https://omega131.github.io/Img2UI/)
+
+https://github.com/user-attachments/assets/c61308b5-bee0-4a07-a8d6-46eb350ccd06
+
+
+[Deployed Site (Live on GitHub Pages)](https://omega131.github.io/Img2UI/)
 
 A complete demonstration video covering:
 1. **End-to-End Extraction**: Loading custom wallpapers via drag-and-drop, clipboard paste (`Ctrl+V`), and curated 4K sources.
