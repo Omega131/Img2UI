@@ -20,6 +20,7 @@
 <summary style="font-size: 24px; font-weight: bold; cursor: pointer;"><h1>Table of Contents</h1></summary>
 
 - [Architecture Diagram](#architecture-diagram)
+- [Demo Video & Walkthrough](#demo-video--walkthrough)
 - [Overview & Motivation](#overview--motivation)
 - [Implementation Architecture](#implementation-architecture)
   - [Modular Directory Structure](#modular-directory-structure)
@@ -43,6 +44,9 @@
   - [3. Dual-Canvas Strategy: High-Throughput vs. Sub-Pixel Precision](#3-dual-canvas-strategy-high-throughput-vs-sub-pixel-precision)
   - [4. Multi-Device Viewport Emulation](#4-multi-device-viewport-emulation)
 - [Multi-Format Token Export Engine](#multi-format-token-export-engine)
+- [Deployment](#deployment)
+  - [1. GitHub Pages (Automated CI/CD)](#1-github-pages-automated-cicd)
+  - [2. Cloud Deployment (Render / Vercel / Netlify)](#2-cloud-deployment-render--vercel--netlify)
 - [Installation & Setup Guide](#installation--setup-guide)
   - [1. Prerequisites](#1-prerequisites)
   - [2. Clone & Install](#2-clone--install)
@@ -139,6 +143,20 @@ flowchart TD
 
     TOKEN_SYNTH --> EXPORT_LAYER
 ```
+
+---
+
+## Demo Video & Walkthrough
+
+[[Watch Video Walkthrough]](https://youtube.com) &nbsp;|&nbsp; [Deployed Site (Live on GitHub Pages)](https://omega131.github.io/Img2UI/)
+
+A complete demonstration video covering:
+1. **End-to-End Extraction**: Loading custom wallpapers via drag-and-drop, clipboard paste (`Ctrl+V`), and curated 4K sources.
+2. **Sub-Pixel Precision Sampling**: Using the 5x Magnifier Loupe on the uncompressed raw canvas to target exact chromatic slots.
+3. **Dynamic Theming & Micro-Animations**: Live switching across 12 dynamic moods (from *Aurora* to *Neo-Brutalist*) with radial shockwaves and specular sweeps.
+4. **Real-Time WCAG 2.1 Accessibility**: Auditing contrast ratios in real time with one-click automatic AA/AAA contrast resolution.
+5. **Responsive Viewport Containment**: Testing across Desktop, Tablet, and Mobile Phone shells with Dynamic Island.
+6. **Multi-Format Token Export**: Compiling ready-to-use CSS Variables, Tailwind CSS configs, SCSS variables, and W3C Design Tokens JSON.
 
 ---
 
@@ -380,6 +398,28 @@ Supports:
 2. **Tailwind CSS**: `module.exports = { theme: { extend: { colors: { ... } } } }`
 3. **SCSS Variables**: `$theme-primary: #...;`
 4. **Design Tokens JSON**: Standardized schema for Figma, Style Dictionary, and Token Studio.
+
+---
+
+# Deployment
+
+### 1. GitHub Pages (Automated CI/CD)
+
+The production application is continuously deployed to GitHub Pages on every push to `main` via [GitHub Actions](.github/workflows/deploy.yml):
+
+- **Live URL**: [https://omega131.github.io/Img2UI/](https://omega131.github.io/Img2UI/)
+- **Pipeline**: Automated checkout, Node.js 20 caching, `npm run build`, artifact upload, and zero-downtime deployment via `actions/deploy-pages@v4`.
+
+### 2. Cloud Deployment (Render / Vercel / Netlify)
+
+Because Img2UI is built as a zero-runtime-dependency static application, it can also be hosted on any static cloud provider with zero configuration:
+
+| Cloud Provider | Service Type | Build Command | Publish Directory |
+| :--- | :--- | :--- | :--- |
+| **GitHub Pages** *(Active)* | Static Pages | `npm run build` | `dist` |
+| **Render** | Static Site | `npm run build` | `dist` |
+| **Vercel** | Vite Frontend | `npm run build` | `dist` |
+| **Netlify** | Static Site | `npm run build` | `dist` |
 
 ---
 
