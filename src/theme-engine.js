@@ -281,9 +281,22 @@ export class ThemeEngine {
     const surfaceRgba = `rgba(${sfr}, ${sfg}, ${sfb}, ${surfaceAlpha.toFixed(2)})`;
     const surfaceHoverRgba = `rgba(${Math.min(255, sfr + 12)}, ${Math.min(255, sfg + 12)}, ${Math.min(255, sfb + 12)}, ${(surfaceAlpha + 0.05).toFixed(2)})`;
 
-    const borderAlpha = preset.id === 'glass' ? 0.32 : preset.id === 'minimal' ? 0.12 : preset.id === 'cyberpunk' ? 0.55 : 0.2;
+    const borderAlpha = preset.id === 'glass' ? 0.32
+      : preset.id === 'minimal' ? 0.12
+      : preset.id === 'cyberpunk' ? 0.55
+      : preset.id === 'brutalist' ? 0.95
+      : preset.id === 'luxe' ? 0.38
+      : preset.id === 'aurora' ? 0.42
+      : preset.id === 'retrowave' ? 0.6
+      : 0.2;
     const surfaceBorder = preset.id === 'cyberpunk'
       ? `rgba(${pr}, ${pg}, ${pb}, 0.55)`
+      : preset.id === 'brutalist'
+      ? `rgba(0, 0, 0, 0.95)`
+      : preset.id === 'luxe'
+      ? `rgba(212, 175, 55, 0.35)`
+      : preset.id === 'retrowave'
+      ? `rgba(236, 72, 153, 0.6)`
       : isDarkSurface
       ? `rgba(255, 255, 255, ${borderAlpha})`
       : `rgba(0, 0, 0, ${borderAlpha})`;
@@ -338,6 +351,28 @@ export class ThemeEngine {
     } else if (preset.id === 'neumorphic') {
       headingGradient = `linear-gradient(180deg, ${textPrimary} 20%, ${primary} 100%)`;
       headingFont = `'Plus Jakarta Sans', sans-serif`;
+    } else if (preset.id === 'aurora') {
+      headingGradient = `linear-gradient(135deg, #34D399 0%, ${primary} 45%, #A78BFA 100%)`;
+      headingFont = `'Plus Jakarta Sans', sans-serif`;
+      headingLetterSpacing = '-0.025em';
+    } else if (preset.id === 'luxe') {
+      headingGradient = `linear-gradient(135deg, #FDE047 0%, #EAB308 50%, #CA8A04 100%)`;
+      headingFont = `'Plus Jakarta Sans', sans-serif`;
+      headingLetterSpacing = '0.02em';
+    } else if (preset.id === 'retrowave') {
+      headingGradient = `linear-gradient(90deg, #F43F5E 0%, #EC4899 45%, #FBBF24 100%)`;
+      headingFont = `'JetBrains Mono', monospace`;
+      headingLetterSpacing = '0.05em';
+      headingTransform = 'uppercase';
+    } else if (preset.id === 'brutalist') {
+      headingGradient = `linear-gradient(0deg, ${primary} 0%, ${primary} 100%)`;
+      headingFont = `'Inter', sans-serif`;
+      headingLetterSpacing = '-0.04em';
+      headingTransform = 'uppercase';
+    } else if (preset.id === 'dusk') {
+      headingGradient = `linear-gradient(135deg, #FB7185 0%, #C084FC 50%, #818CF8 100%)`;
+      headingFont = `'Plus Jakarta Sans', sans-serif`;
+      headingLetterSpacing = '-0.02em';
     }
 
     return {

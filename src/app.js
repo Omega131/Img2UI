@@ -211,13 +211,15 @@ class App {
       });
     }
 
-    // Auto Fix & Reset
+    // Auto Fix & Reset with theme switch animation
     this.btnAutoFix.addEventListener('click', () => {
+      this.triggerThemeSwitchAnimation();
       this.engine.autoOptimizeContrast();
       this.showToast('Theme optimized for WCAG AA compliance! ✨');
     });
 
     this.btnReset.addEventListener('click', () => {
+      this.triggerThemeSwitchAnimation();
       this.engine.resetAdjustments();
       this.syncSlidersFromEngine();
       this.showToast('Adjustments reset to preset defaults.');
@@ -382,6 +384,45 @@ class App {
     }
   }
 
+  triggerThemeSwitchAnimation(presetId = null) {
+    if (!this.previewContainer) return;
+
+    // 1. Trigger radial shockwave on preview container
+    this.previewContainer.classList.remove('theme-switching');
+    // Force DOM reflow so re-triggering restarts the micro-animation
+    void this.previewContainer.offsetWidth;
+    this.previewContainer.classList.add('theme-switching');
+
+    if (this.switchAnimTimeout) clearTimeout(this.switchAnimTimeout);
+    this.switchAnimTimeout = setTimeout(() => {
+      this.previewContainer.classList.remove('theme-switching');
+    }, 800);
+
+    // 2. Cascade swatch-pop animation on uniform grid slots
+    const swatches = this.uniformPaletteGrid?.querySelectorAll('.slot-box') || [];
+    swatches.forEach((swatch, idx) => {
+      swatch.classList.remove('swatch-pop');
+      setTimeout(() => {
+        swatch.classList.add('swatch-pop');
+        setTimeout(() => swatch.classList.remove('swatch-pop'), 500);
+      }, idx * 40);
+    });
+
+    // 3. Overall WCAG badge pulse
+    if (this.overallWcagBadge) {
+      this.overallWcagBadge.classList.remove('badge-updated');
+      void this.overallWcagBadge.offsetWidth;
+      this.overallWcagBadge.classList.add('badge-updated');
+      setTimeout(() => {
+        this.overallWcagBadge.classList.remove('badge-updated');
+      }, 600);
+    }
+
+    // 4. Re-sync sidebar height to ensure perfect alignment with mockup edge
+    setTimeout(() => this.syncSidebarLength(), 60);
+    setTimeout(() => this.syncSidebarLength(), 350);
+  }
+
   renderWallpapers() {
     this.wallpaperGallery.innerHTML = '';
     SAMPLE_WALLPAPERS.forEach((wp) => {
@@ -420,11 +461,16 @@ class App {
       `;
 
       card.addEventListener('click', () => {
-        document.querySelectorAll('.preset-card').forEach((c) => c.classList.remove('active'));
-        card.classList.add('active');
+        document.querySelectorAll('.preset-card').forEach((c) => {
+          c.classList.remove('active', 'just-activated');
+        });
+        card.classList.add('active', 'just-activated');
+        setTimeout(() => card.classList.remove('just-activated'), 500);
+
+        this.triggerThemeSwitchAnimation(id);
         this.engine.setPreset(id);
         this.syncSlidersFromEngine();
-        this.showToast(`Applied ${preset.name} preset`);
+        this.showToast(`Applied ${preset.name} mood ✨`);
       });
 
       this.presetsGrid.appendChild(card);
@@ -449,11 +495,14 @@ class App {
       this.extractColorsFromImage(img);
 
       if (recommendedPreset && THEME_PRESETS[recommendedPreset]) {
+        this.triggerThemeSwitchAnimation(recommendedPreset);
         this.engine.setPreset(recommendedPreset);
         document.querySelectorAll('.preset-card').forEach((c) => {
           c.classList.toggle('active', c.dataset.id === recommendedPreset);
         });
         this.syncSlidersFromEngine();
+      } else {
+        this.triggerThemeSwitchAnimation();
       }
     } catch (err) {
       console.error('Error loading wallpaper:', err);

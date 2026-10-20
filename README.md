@@ -1,167 +1,420 @@
-# Img2UI — Image-Based Theming Engine & Design System Generator
+<h1 align="center">🖼️ Img2UI</h1>
 
-> **An interactive, real-time theming engine that extracts color palettes from wallpapers and transforms them into cohesive, accessible, production-ready design systems.**
+<p align="center">
+  <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='100' height='100' fill='none' stroke='%2306B6D4' stroke-width='1.8'%3E%3Ccircle cx='12' cy='12' r='10' stroke='%2306B6D4'/%3E%3Cpath d='m4.93 4.93 4.24 4.24' stroke='%2338BDF8'/%3E%3Cpath d='m14.83 9.17 4.24-4.24' stroke='%2338BDF8'/%3E%3Cpath d='m14.83 14.83 4.24 4.24' stroke='%2338BDF8'/%3E%3Cpath d='m9.17 14.83-4.24 4.24' stroke='%2338BDF8'/%3E%3Ccircle cx='12' cy='12' r='4' fill='%2306B6D4' fill-opacity='0.25' stroke='%2306B6D4' stroke-width='2'/%3E%3C/svg%3E" alt="Img2UI Logo" width="100" />
+</p>
 
----
+<h2 align="center"><strong>Intelligent Wallpaper-to-Design System Generator & Real-Time Theming Studio.</strong><br> Extract harmonious 6-slot color roles, compile reactive design tokens, and audit WCAG AA/AAA accessibility in real-time.</h2>
 
-## 🌟 Overview
+<p align="center">
+  <a href="#architecture-diagram"><img src="https://img.shields.io/badge/Architecture-Mermaid-1f425f.svg?style=flat-square" alt="Architecture" /></a>
+  <a href="#installation--setup-guide"><img src="https://img.shields.io/badge/JavaScript-ES%20Modules-F7DF1E.svg?style=flat-square&logo=javascript&logoColor=black" alt="JavaScript" /></a>
+  <a href="https://vite.dev"><img src="https://img.shields.io/badge/Vite-8.3.4-646CFF.svg?style=flat-square&logo=vite&logoColor=white" alt="Vite" /></a>
+  <a href="#color-extraction-pipeline--mathematical-mechanics"><img src="https://img.shields.io/badge/Canvas%20API-Offscreen%20Quantization-E34F26.svg?style=flat-square&logo=html5&logoColor=white" alt="Canvas API" /></a>
+  <a href="#3-real-time-wcag-21-contrast-auditing--one-click-auto-fix"><img src="https://img.shields.io/badge/Accessibility-WCAG%202.1%20AA%2FAAA-10B981.svg?style=flat-square" alt="WCAG 2.1" /></a>
+  <a href="#2-12-curated-dynamic-theme-moods"><img src="https://img.shields.io/badge/Presets-12%20Dynamic%20Moods-EC4899.svg?style=flat-square" alt="Presets" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square" alt="License" /></a>
+</p>
 
-**Img2UI** enables designers and developers to upload any wallpaper, artwork, or screenshot, extract its core chromatic identity, and instantly preview a fully themed, modern web application.
+<details>
+<summary style="font-size: 24px; font-weight: bold; cursor: pointer;"><h1>Table of Contents</h1></summary>
 
-The application bridges the gap between aesthetic inspiration and production code by calculating accessible color contrast, dynamically adapting UI components via CSS custom properties, and exporting ready-to-use tokens for **CSS**, **Tailwind CSS**, **Design Tokens (JSON)**, and **SCSS**.
+- [Architecture Diagram](#architecture-diagram)
+- [Overview & Motivation](#overview--motivation)
+- [Implementation Architecture](#implementation-architecture)
+  - [Modular Directory Structure](#modular-directory-structure)
+  - [Zero-Dependency Runtime](#zero-dependency-runtime)
+- [Color Extraction Pipeline & Mathematical Mechanics](#color-extraction-pipeline--mathematical-mechanics)
+  - [1. Dual-Canvas Ingestion & Preprocessing](#1-dual-canvas-ingestion--preprocessing)
+  - [2. Median Cut Vector Quantization (Color Thief Core)](#2-median-cut-vector-quantization-color-thief-core)
+  - [3. Adaptive K-Means++ Clustering & Convergence](#3-adaptive-k-means-clustering--convergence)
+  - [4. Perceptual Colorfulness & Relative Luminance Filtering](#4-perceptual-colorfulness--relative-luminance-filtering)
+  - [5. Extraction Strategy Heuristics](#5-extraction-strategy-heuristics)
+  - [6. Full-Scale Precision Pixel Sampler & 5x Magnifier Loupe](#6-full-scale-precision-pixel-sampler--5x-magnifier-loupe)
+- [Dynamic Theme Generation Logic & Mood Engine](#dynamic-theme-generation-logic--mood-engine)
+  - [1. 6-Slot Uniform Role Mapping](#1-6-slot-uniform-role-mapping)
+  - [2. Algorithmic Token Derivation](#2-algorithmic-token-derivation)
+  - [3. 12 Curated Dynamic Theme Moods](#3-12-curated-dynamic-theme-moods)
+  - [4. Real-Time WCAG 2.1 Contrast Auditing & One-Click Auto-Fix](#4-real-time-wcag-21-contrast-auditing--one-click-auto-fix)
+  - [5. Fluid CSS Transitions & Shockwave Micro-Animations](#5-fluid-css-transitions--shockwave-micro-animations)
+- [Design Decisions & Engineering Philosophy](#design-decisions--engineering-philosophy)
+  - [1. Pure CSS Custom Property Cascading vs. CSS-in-JS](#1-pure-css-custom-property-cascading-vs-css-in-js)
+  - [2. Dynamic Edge-to-Edge Sidebar Geometry (Null Space Elimination)](#2-dynamic-edge-to-edge-sidebar-geometry-null-space-elimination)
+  - [3. Dual-Canvas Strategy: High-Throughput vs. Sub-Pixel Precision](#3-dual-canvas-strategy-high-throughput-vs-sub-pixel-precision)
+  - [4. Multi-Device Viewport Emulation](#4-multi-device-viewport-emulation)
+- [Multi-Format Token Export Engine](#multi-format-token-export-engine)
+- [Installation & Setup Guide](#installation--setup-guide)
+  - [1. Prerequisites](#1-prerequisites)
+  - [2. Clone & Install](#2-clone--install)
+  - [3. Start Development Server](#3-start-development-server)
+  - [4. Production Build](#4-production-build)
+- [License](#license)
 
----
-
-## 🚀 Key Features
-
-### 1. Image Upload & Color Extraction
-- **Drag-and-Drop & Clipboard Paste (`Ctrl+V`)**: Upload images directly from your computer or paste them from your clipboard.
-- **Curated Wallpaper Library**: Includes 4 high-definition wallpaper presets:
-  - *Cyberpunk Neon Metropolis* (Vibrant / Dark)
-  - *Sahara Golden Dunes* (Warm / Golden Hour)
-  - *Emerald Mist Ancient Woods* (Nature / Organic)
-  - *Arctic Twilight Glaciers* (Cool / Minimal)
-- **Multiple Palette Extraction Algorithms**:
-  - **Vibrant & Accent**: Identifies high-chroma, aesthetically dominant accent colors while maintaining luminance balance.
-  - **K-Means Clustering**: Unsupervised vector quantization in RGB color space with k-means++ seeding to find true cluster centroids.
-  - **Median Cut (Color Thief)**: Quantization algorithm splitting color bounding boxes along largest channel ranges.
-  - **Pastel & Muted**: Filters for soft, harmonious, low-saturation tones.
-- **Precision Color Sampling (EyeDropper)**: Native `window.EyeDropper` API integration and canvas-based pixel sampling to inspect and extract colors directly from wallpapers.
-
-### 2. Predefined Theme Presets & Moods
-Each preset modifies token distribution, border styles, elevation, and opacity across all components:
-- **Minimal**: Understated, high whitespace, clean 1px borders, maximum legibility.
-- **Vibrant**: High saturation, bold gradients, glowing borders and interactive buttons.
-- **Warm**: Amber, terracotta, peach horizon tones, and coffee/cream undertones.
-- **Cool**: Icy blues, deep teals, slate tones, and crisp cold accents.
-- **Glass**: Glassmorphism with heavy backdrop blur (`backdrop-filter: blur(...)`), translucent frosted surfaces, and specular highlights.
-- **Cyberpunk Dark**: Obsidian midnight backdrop with electric cyan/magenta neon rim glow.
-- **Neumorphic Soft**: Tactile dual-shadow embossed surfaces and soft extruded cards.
-
-### 3. Real-Time Visual Adjustments
-Interactive sliders to fine-tune visual parameters with instantaneous live updates:
-- **Saturation** (0% – 200%)
-- **Brightness** (50% – 150%)
-- **Contrast** (50% – 150%)
-- **Background Blur** (0px – 40px)
-- **Overlay Tint Opacity** (0% – 95%)
-- **Hue / Temperature Shift** (-180° – +180°)
-- **Card Surface Opacity** (10% – 100%)
-- **Border Radius** (0px – 28px)
-- **Glow & Shadow Intensity** (0% – 100%)
-
-### 4. Accessibility-Aware Color Selection & WCAG 2.1 Auditor
-- Real-time **WCAG 2.1 Contrast Ratio** calculations:
-  - Primary button text vs background
-  - Secondary button text vs background
-  - Heading text vs surface
-  - Body text vs surface
-- Visual audit badges: **AAA Pass (≥ 7:1)**, **AA Pass (≥ 4.5:1)**, **AA Large Only (≥ 3:1)**, and **Fail**.
-- **Auto-Fix Contrast**: One-click intelligent lightness optimizer that adjusts color luminance to guarantee WCAG AA / AAA compliance while preserving base hue.
-
-### 5. Themed UI Component Showcase
-The preview canvas simulates a real-world SaaS Dashboard & Media Player application:
-- **Navigation Bar**: Themed brand mark, navigation links, and user profile pill.
-- **Hero Header**: Primary heading with dynamic gradient accent, secondary body text, primary CTA with micro-glow, and secondary outline button.
-- **KPI Stats Cards**: Metric counters ($84,230 revenue, 19,420 users, 99.94% SLA), growth trend pills, and animated gradient progress tracks.
-- **Form Elements**: Search inputs, custom toggles, styled checkboxes, category chips, and button hierarchy states (Normal, Hover, Active).
-- **Interactive Audio Player**: Album artwork, track metadata, and dynamic animated audio waveform bars.
-- **Multi-Device Viewport**: Toggle between **Desktop**, **Tablet (768px)**, and **Mobile Phone Mockup (with Dynamic Island)**.
-
-### 6. Design Token Export
-- **CSS Custom Properties**: `:root` variables and utility classes.
-- **Tailwind CSS**: Complete `tailwind.config.js` color and styling theme extension.
-- **Design Tokens JSON**: W3C Design Tokens Community Group compliant JSON.
-- **SCSS**: SASS variable definitions.
-- One-click copy with toast notifications and direct file downloads.
+</details>
 
 ---
 
-## 🛠️ Architecture & Implementation
+# Architecture Diagram
 
-### Directory Structure
+```mermaid
+flowchart TD
+    subgraph INGEST ["📥 Image Ingestion & Input Channels"]
+        DROP["Drag-and-Drop / File Upload<br>(FileReader API)"]
+        PASTE["System Clipboard Paste<br>(ClipboardEvent / Blob)"]
+        GALLERY["Preloaded Curated Wallpapers<br>(Cyberpunk, Sunset, Forest, Glacier)"]
+        LOUPE_IN["5x Precision Loupe Sampler<br>(Offscreen Native 1:1 Canvas)"]
+    end
+
+    subgraph DUAL_CANVAS ["🎨 Dual-Canvas Abstraction"]
+        DOWN_CANVAS["Downsampled Offscreen Canvas<br>(150px Max Dimension, 30ms Fast Path)"]
+        NATIVE_CANVAS["Native Full-Resolution Canvas<br>(Uncompressed 1:1 Raw Pixels)"]
+    end
+
+    subgraph EXTRACTION ["⚙️ Color Extraction & Clustering Engine"]
+        QUANT_MEDIAN["Median Cut Quantization<br>(RGB Bounding Box Dissection)"]
+        QUANT_KMEANS["Adaptive K-Means++<br>(Euclidean Distance Convergence)"]
+        PERCEPTUAL["Perceptual Filter & Sorter<br>(Luminance Y & Colorfulness C)"]
+        STRATEGY["Strategy Dispatcher<br>(Vibrant, Muted, Dominant, Contrast)"]
+    end
+
+    subgraph UNIFORM_ROLES ["🎯 6-Slot Uniform Role Assignment"]
+        SLOT_GRID["Uniform Palette Grid<br>(S1: Primary, S2: Secondary, S3: Accent,<br>S4: Surface, S5: Background, S6: Text)"]
+        MANUAL_OVERRIDE["Interactive Role Picker & Hex Tweaker"]
+    end
+
+    subgraph THEME_CORE ["🔮 Dynamic Theme & Mood Engine"]
+        PRESET_REGISTRY["12 Dynamic Mood Presets<br>(Minimal, Vibrant, Warm, Cool, Glass, Cyberpunk,<br>Neumorphic, Aurora, Luxe, Retrowave, Brutalist, Dusk)"]
+        TOKEN_SYNTH["Token Synthesizer<br>(Alphas, Glows, Borders, Radius, Lightness Hover)"]
+        WCAG_AUDIT["WCAG 2.1 Contrast Auditor<br>(Relative Luminance L1/L2 Calculator)"]
+        AUTO_FIX["One-Click Auto-Fix Solver<br>(Luminance Shifting for 4.5:1 / 7:1)"]
+        ANIM_SHOCKWAVE["Micro-Animation Controller<br>(Radial Shockwave & Specular Sweep)"]
+    end
+
+    subgraph PREVIEW_STAGE ["🖥️ Live Interactive Preview Studio"]
+        NAVBAR["Themed Navbar & Profile Pill"]
+        HERO["Hero Header & Dynamic Gradient Accent"]
+        KPIS["Telemetry Metric KPI Cards & Tracks"]
+        FORMS["Interactive Search & Tag Filters"]
+        AUDIO_WIDGET["Interactive Audio Player & Waveform"]
+        VIEWPORT_CTRL["Multi-Viewport Emulator<br>(Desktop, Tablet, Mobile Phone)"]
+        SIDEBAR_SYNC["Sidebar Edge-to-Edge Geometry Sync<br>(Dynamic Null-Space Elimination)"]
+    end
+
+    subgraph EXPORT_LAYER ["💾 Multi-Format Design Token Exporter"]
+        EXP_CSS["CSS Custom Properties (:root)"]
+        EXP_TAILWIND["Tailwind CSS (tailwind.config.js)"]
+        EXP_SCSS["SCSS / SASS Variables"]
+        EXP_JSON["W3C Design Tokens JSON"]
+    end
+
+    DROP --> DOWN_CANVAS
+    PASTE --> DOWN_CANVAS
+    GALLERY --> DOWN_CANVAS
+    DROP --> NATIVE_CANVAS
+    PASTE --> NATIVE_CANVAS
+    GALLERY --> NATIVE_CANVAS
+    LOUPE_IN --> NATIVE_CANVAS
+
+    DOWN_CANVAS --> QUANT_MEDIAN
+    DOWN_CANVAS --> QUANT_KMEANS
+    QUANT_MEDIAN --> PERCEPTUAL
+    QUANT_KMEANS --> PERCEPTUAL
+    PERCEPTUAL --> STRATEGY
+    STRATEGY --> SLOT_GRID
+
+    NATIVE_CANVAS --> LOUPE_IN
+    LOUPE_IN --> SLOT_GRID
+    MANUAL_OVERRIDE --> SLOT_GRID
+
+    SLOT_GRID --> TOKEN_SYNTH
+    PRESET_REGISTRY --> TOKEN_SYNTH
+    TOKEN_SYNTH --> WCAG_AUDIT
+    WCAG_AUDIT --> AUTO_FIX
+    AUTO_FIX --> TOKEN_SYNTH
+
+    TOKEN_SYNTH --> PREVIEW_STAGE
+    ANIM_SHOCKWAVE --> PREVIEW_STAGE
+    VIEWPORT_CTRL --> PREVIEW_STAGE
+    PREVIEW_STAGE --> SIDEBAR_SYNC
+
+    TOKEN_SYNTH --> EXPORT_LAYER
+```
+
+---
+
+# Overview & Motivation
+
+Modern UI design systems frequently rely on wallpaper-driven theming (seen in macOS Sonoma, Android Material You, and Windows Mica). However, developers and designers often face critical bottlenecks:
+
+- **Manual Color Hunting**: Extracting harmonious colors via third-party eyedroppers is slow, biased, and rarely accounts for luminance balance across interactive states.
+- **Inaccessible Contrast Failures**: Extracted palettes placed directly onto interfaces consistently violate WCAG AA/AAA guidelines, resulting in illegible typography and unusable buttons.
+- **Disconnected Visual Identity**: Color is only one dimension of a theme. Modern design requires harmonious control of border radius, backdrop blur, elevation shadows, typography, and specular glow.
+- **Tooling Overhead**: Existing theming libraries pull in hundreds of megabytes of framework dependencies, complex bundler plugins, and rigid class conventions.
+
+**Img2UI** solves these challenges by providing a standalone, zero-dependency browser studio that extracts 6-slot chromatic roles from any image, evaluates contrast compliance in real time, and compiles cohesive, animated design systems ready for production deployment.
+
+---
+
+# Implementation Architecture
+
+### Modular Directory Structure
+
+The project is structured into cohesive, decoupled ES modules:
 
 ```
 Img2UI/
+├── index.html                # High-fidelity preview stage and control studio
+├── package.json              # Vite scripts and workspace metadata
+├── vite.config.js            # Build configuration
 ├── public/
-│   └── wallpapers/
-│       ├── cyberpunk.jpg
-│       ├── sunset.jpg
-│       ├── forest.jpg
-│       └── glacier.jpg
-├── src/
-│   ├── color-extractor.js    # Canvas-based K-Means, Median Cut, and Vibrant extraction
-│   ├── presets.js            # Theme mood definitions and style configurations
-│   ├── sample-wallpapers.js  # Curated wallpaper metadata
-│   ├── contrast-checker.js   # WCAG 2.1 relative luminance and contrast auditor
-│   ├── theme-engine.js       # Central token manager and DOM variable synchronizer
-│   ├── export-manager.js     # Exporter for CSS, Tailwind, JSON, and SCSS
-│   ├── style.css             # Vanilla CSS design system and theme tokens
-│   └── app.js                # Main application controller and event bindings
-├── index.html                # Application shell and UI component layout
-├── package.json
-└── README.md
+│   └── wallpapers/           # Curated preloaded wallpapers (4K WebP / JPG)
+│       ├── cyberpunk.jpg     # Obsidian neon metropolitan palette
+│       ├── sunset.jpg        # Amber and terracotta warm horizon
+│       ├── forest.jpg        # Organic emerald foliage and moss
+│       └── glacier.jpg       # Arctic ice cyan and slate
+└── src/
+    ├── app.js                # Main application orchestrator & event coordinator
+    ├── color-extractor.js    # Canvas quantization, K-Means++, Median Cut, and Loupe
+    ├── theme-engine.js       # Central token synthesis, role mapping, and DOM cascading
+    ├── presets.js            # 12 curated dynamic theme mood definitions
+    ├── contrast-checker.js   # WCAG 2.1 relative luminance and contrast auditor
+    ├── export-manager.js     # Multi-format token generators (CSS, Tailwind, SCSS, JSON)
+    ├── sample-wallpapers.js  # Curated wallpaper registry with recommended moods
+    └── style.css             # Vanilla CSS design system, micro-animations, and viewport layouts
 ```
 
-### Color Extraction Approach
+### Zero-Dependency Runtime
 
-1. **Downsampling & Filtering**: The uploaded image is drawn to an offscreen HTML5 `<canvas>` scaled down to a maximum dimension of 150px. Transparent pixels (alpha < 128) are filtered out.
-2. **K-Means Clustering**: Using the k-means++ initialization algorithm, seed centroids are chosen probabilistically based on squared Euclidean distance. Clusters undergo iterative barycentric centroid recalculation until convergence.
-3. **Median Cut (Color Thief)**: Recursively splits color bounding boxes along the channel with the widest variation until the target box count is reached, returning the arithmetic mean color of each box.
-4. **Vibrant & Accent Selection**: Calculates colorfulness $C$ and relative luminance $Y = 0.2126R + 0.7152G + 0.0722B$ to select colors with high saturation and moderate lightness, ensuring distinct hues.
-
-### Theme Generation & Token Consistency
-
-The engine manages a single source of truth for design tokens. When any wallpaper, preset, or visual slider changes:
-1. Base colors are transformed through saturation, brightness, contrast, and hue rotation matrices.
-2. Derived tokens (hover states, alpha transparencies, focus rings, and elevation glows) are recalculated.
-3. CSS variables (`--theme-primary`, `--theme-surface`, `--theme-radius`, etc.) are injected into the document root.
-4. All UI components update simultaneously through pure CSS custom property cascading, guaranteeing 100% theme consistency.
+The runtime application operates with **0 runtime dependencies**. It compiles directly to native web standards:
+- **Vanilla JavaScript (ES2022 Modules)**: Native browser execution without virtual DOM abstractions.
+- **Vanilla CSS3 Custom Properties**: Dynamic stylesheet recalculation via CSS variables (`--theme-*`) yielding instant 60fps cascading updates.
+- **HTML5 Canvas 2D API**: Hardware-accelerated pixel extraction, vector quantization, and sub-pixel magnification.
 
 ---
 
-## 💻 Getting Started Locally
+# Color Extraction Pipeline & Mathematical Mechanics
 
-### Prerequisites
-- Node.js (v18 or higher recommended)
-- npm or yarn
+### 1. Dual-Canvas Ingestion & Preprocessing
 
-### Installation
+When an image is loaded (via file upload, drag-and-drop, clipboard paste, or preloaded wallpaper), it is ingested into a **dual-canvas architecture**:
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/Omega131/Img2UI.git
-   cd Img2UI
-   ```
+1. **Downsampled Extraction Canvas**: Scaled proportionally such that $\max(\text{width}, \text{height}) \le 150\text{ px}$. This dramatically reduces pixel count from millions to $< 22,500\text{ pixels}$, allowing vector quantization and clustering to complete in **$< 35\text{ ms}$**.
+2. **Uncompressed Full-Resolution Canvas**: Maintains the uncompressed $1:1$ source image dimensions, dedicated solely to the **Precision Pixel Sampler** and **5x Magnifier Loupe**.
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+Transparent pixels ($\alpha < 128$) are automatically pruned during pixel buffer ingestion.
 
-3. Start the local development server:
-   ```bash
-   npm run dev
-   ```
-   Open `http://127.0.0.1:5173/` in your browser.
+### 2. Median Cut Vector Quantization (Color Thief Core)
 
-4. Build for production:
-   ```bash
-   npm run build
-   ```
+The Median Cut algorithm treats color extraction as recursive spatial partitioning in 3D RGB color space:
+
+1. All pixels are enclosed in an initial axis-aligned bounding box defined by $[\min(R), \max(R)]$, $[\min(G), \max(G)]$, $[\min(B), \max(B)]$.
+2. The bounding box dimension with the greatest delta is determined:
+   $$\Delta_{max} = \max(\Delta R, \Delta G, \Delta B)$$
+3. Pixels inside the box are sorted along this maximal axis and split at the median index into two sub-boxes.
+4. Steps 2–3 repeat recursively until $K = 16$ quantization boxes are created.
+5. The representative color of each box is calculated as the centroid arithmetic mean:
+   $$\bar{C} = \left( \frac{1}{N}\sum R_i, \frac{1}{N}\sum G_i, \frac{1}{N}\sum B_i \right)$$
+
+### 3. Adaptive K-Means++ Clustering & Convergence
+
+To complement Median Cut, Img2UI implements an unsupervised vector clustering pipeline with **K-Means++ seeding** to prevent local minima traps:
+
+- **Seeding**: The first centroid $\mu_1$ is chosen uniformly at random from the pixel set. Subsequent centroids $\mu_j$ are chosen with probability proportional to the squared Euclidean distance from the nearest existing centroid:
+  $$P(x) = \frac{D(x)^2}{\sum_{x' \in X} D(x')^2}$$
+- **Iterative Convergence**: Pixels are assigned to the closest centroid $\arg\min_j \|x_i - \mu_j\|_2$. Centroids are updated to the mean of their assigned clusters until convergence ($\Delta \mu < 1.0$) or a cap of 12 iterations is reached.
+
+### 4. Perceptual Colorfulness & Relative Luminance Filtering
+
+Extracted clusters are evaluated under perceptual color theory:
+
+- **WCAG 2.1 Relative Luminance ($L$)**:
+  $$L = 0.2126 R_{lin} + 0.7152 G_{lin} + 0.0722 B_{lin}$$
+  where:
+  $$C_{lin} = \begin{cases} \frac{C_{srgb}}{12.92} & \text{if } C_{srgb} \le 0.04045 \\ \left(\frac{C_{srgb} + 0.055}{1.055}\right)^{2.4} & \text{otherwise} \end{cases}$$
+- **Hasler-Süsstrunk Colorfulness Metric ($C$)**:
+  $$C = \sqrt{\sigma_{rg}^2 + \sigma_{yb}^2} + 0.3 \sqrt{\mu_{rg}^2 + \mu_{yb}^2}$$
+  approximated in fast-path via channel variance:
+  $$C \approx \sqrt{(R - G)^2 + (R - B)^2 + (G - B)^2}$$
+
+### 5. Extraction Strategy Heuristics
+
+Users can switch extraction strategies on the fly:
+- **Vibrant & Accent (Recommended)**: Emphasizes high-chroma accents with moderate lightness ($0.35 \le L \le 0.75$), optimizing for vivid call-to-actions.
+- **K-Means Clustering**: Unsupervised geometric centroids representing true mathematical color density.
+- **Median Cut**: Broad tonal balance across dark, mid, and highlight channel distributions.
+- **Pastel & Muted**: Favors low-saturation, high-lightness tones for softer aesthetic palettes.
+
+### 6. Full-Scale Precision Pixel Sampler & 5x Magnifier Loupe
+
+For surgical color selection:
+- An interactive modal renders the full-scale wallpaper on an uncompressed canvas.
+- A **5x Magnifier Loupe** renders a magnified $16 \times 16$ pixel region around the cursor using nearest-neighbor interpolation (`imageSmoothingEnabled = false`).
+- Displays live RGB/Hex coordinates and samples exact pixel values directly into any targeted palette slot with a single click.
 
 ---
 
-## 🎨 Technologies Used
+# Dynamic Theme Generation Logic & Mood Engine
 
-- **HTML5 & Vanilla JavaScript (ES Modules)**: Modern, lightweight, framework-free architecture.
-- **Vanilla CSS3**: Modern design system utilizing CSS Custom Properties, flexbox, CSS grid, and backdrop filters.
-- **Vite**: Ultra-fast development server and production bundler.
-- **HTML5 Canvas API**: High-performance pixel manipulation and color quantization.
-- **Web APIs**: `EyeDropper API`, `FileReader API`, `Clipboard API`.
+### 1. 6-Slot Uniform Role Mapping
+
+Img2UI standardizes color distribution across a unified 6-slot hierarchy:
+
+| Slot | Role | Primary Assignment in UI |
+| :---: | :--- | :--- |
+| **S1** | **Primary** | Main CTA buttons, active tab indicators, primary brand marks, focus rings |
+| **S2** | **Secondary** | Secondary action buttons, badge outlines, auxiliary tags, audio controls |
+| **S3** | **Accent** | Metric trend indicators, heading highlights, glowing status dots, notifications |
+| **S4** | **Surface** | Card backgrounds, navbar containers, modal backdrops (with dynamic alpha) |
+| **S5** | **Background** | Main app canvas tint, underlying wallpaper scrim, global backdrop |
+| **S6** | **Text / Border** | Primary text headers, secondary body labels, subtle component borders |
+
+### 2. Algorithmic Token Derivation
+
+The `ThemeEngine` compiles raw slot hex values into an expansive set of reactive CSS custom properties:
+- **Specular Alpha Scales**: Automatically computes `rgba()` strings for 15%, 25%, 30%, 35%, and 50% opacity tiers for subtle glows, chip backgrounds, and frosted borders.
+- **Luminance-Preserving Hover States**: Shorter or taller luminance shifts depending on base lightness:
+  $$L_{hover} = \begin{cases} L - 0.08 & \text{if } L > 0.50 \text{ (darkens light colors)} \\ L + 0.08 & \text{if } L \le 0.50 \text{ (brightens dark colors)} \end{cases}$$
+- **Surface Contrast Auto-Detect**: Determines whether the card surface is dark or light via relative luminance threshold ($L_{surface} < 0.35$), dynamically setting primary text to `#FFFFFF` or `#090D16` and border alphas accordingly.
+- **Dynamic Derivative Gradients**: Blends Primary, Secondary, and Accent slots into bespoke linear gradients used across headings and brand accents.
 
 ---
 
-## 📄 License
+### 3. 12 Curated Dynamic Theme Moods
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+Theme moods modify spatial geometry, blur, saturation, contrast, shadows, and typography:
+
+| Mood Preset | Badge | Character & Visual Identity |
+| :--- | :--- | :--- |
+| **Minimal** | `Clean & Muted` | Crisp 1px solid borders, low saturation (0.75x), 4px blur, high legibility Inter font. |
+| **Vibrant** | `Bold & Punchy` | High saturation (1.35x), bold multi-stop gradient headings, 16px radius, glowing borders. |
+| **Warm** | `Golden & Cozy` | +24° amber hue shift, terracotta undertones, soft amber drop shadows. |
+| **Cool** | `Arctic & Crisp` | -25° cyan/teal tone shift, slate undertones, icy blue card specular highlights. |
+| **Glass** | `Frosted Glass` | Heavy backdrop blur (22px), 38% surface opacity, luminous top-edge specular borders. |
+| **Cyberpunk** | `Neon Synth` | Obsidian midnight canvas, neon rim lighting (1.5px), JetBrains Mono uppercase headings. |
+| **Neumorphic** | `Soft UI` | Dual-shadow embossed cards (`8px 8px 18px` dark / `-6px -6px 14px` light), 20px organic curves. |
+| **Aurora** | `Boreal Aura` | Northern lights spectral glow, emerald/cyan accents, deep oceanic indigo backdrop. |
+| **Obsidian Luxe** | `Executive Gold` | Ultra-dark obsidian canvas, champagne gold metallic borders (`#D4AF37`), executive elevation. |
+| **Retrowave** | `80s Outrun` | 80s arcade vaporwave, hot neon magenta, solar sunset orange, monospace retro headings. |
+| **Neo-Brutalist** | `Raw & Punchy` | 0px sharp corners, 2.5px solid borders, hard 5px isometric drop shadows, uppercase headers. |
+| **Twilight Dusk** | `Dusk Horizon` | Dusk coral and violet gradient horizons, gentle warm illumination, feathered 22px radius. |
+
+---
+
+### 4. Real-Time WCAG 2.1 Contrast Auditing & One-Click Auto-Fix
+
+The `ContrastChecker` continuously audits contrast ratios for all critical text and button pairs:
+$$CR = \frac{L_1 + 0.05}{L_2 + 0.05}$$
+where $L_1$ is the lighter luminance and $L_2$ is the darker luminance.
+
+- **Threshold Compliance**:
+  - **AAA Pass**: $CR \ge 7.0:1$ (Normal text) / $CR \ge 4.5:1$ (Large text)
+  - **AA Pass**: $CR \ge 4.5:1$ (Normal text) / $CR \ge 3.0:1$ (Large text)
+  - **Fail**: $CR < 4.5:1$
+- **Intelligent Auto-Fix Contrast Solver**:
+  When invoked, the engine analyzes the contrast delta between surface and text. It shifts the lightness coordinate in HSL color space iteratively while preserving the exact base hue and saturation, achieving guaranteed WCAG AA compliance with zero aesthetic disruption.
+
+---
+
+### 5. Fluid CSS Transitions & Shockwave Micro-Animations
+
+Theme changes feature custom physics-inspired micro-interactions:
+1. **Universal Fluid Transitions**: Preview components transition `background`, `border-color`, `border-radius`, `box-shadow`, and `color` using a custom `0.45s cubic-bezier(0.16, 1, 0.3, 1)` easing curve.
+2. **Radial Shockwave Burst**: An absolute layer (`.theme-shockwave-layer`) emits an expanding radial light wave across the mockup canvas whenever a theme mood or wallpaper changes (`@keyframes themeShockwave`).
+3. **Heading Light Sweep**: Triggers a specular brightness surge (`@keyframes textShineSweep`) across gradient derivative text.
+4. **Cascading Swatch Pop**: Palette swatches in the uniform grid pop with a staggered 40ms sequence (`@keyframes swatchPop`).
+5. **Audit Badge Pulse**: The accessibility badge pulses on contrast re-evaluation (`@keyframes auditBadgePulse`).
+
+---
+
+# Design Decisions & Engineering Philosophy
+
+### 1. Pure CSS Custom Property Cascading vs. CSS-in-JS
+
+Instead of re-rendering component trees with React/Vue or generating utility classes with a heavy CSS-in-JS engine, Img2UI injects calculated values directly into CSS custom properties (`--theme-*`) on `#preview-container`. The browser's native C++ style resolution engine recalculates all styles in a single frame, achieving buttery smooth **60fps transitions without script lag**.
+
+### 2. Dynamic Edge-to-Edge Sidebar Geometry (Null Space Elimination)
+
+In dual-pane studio layouts, a persistent issue is "null space" (empty dead zones) appearing beneath the controls sidebar when the main preview container is tall.
+
+Img2UI introduces dynamic geometry synchronization (`syncSidebarLength()`):
+- Using a `ResizeObserver` coupled with viewport resize listeners, the script measures the exact pixel bottom edge of the preview stage:
+  $$\text{targetHeight} = \text{previewContainer.offsetTop} + \text{previewContainer.offsetHeight}$$
+- The studio sidebar's `height` and `max-height` are pinned dynamically to this target, allowing the sidebar's internal content to scroll smoothly with custom scrollbars while keeping its bottom border **pixel-perfectly aligned with the mockup container (0px delta)**.
+
+### 3. Dual-Canvas Strategy: High-Throughput vs. Sub-Pixel Precision
+
+Single-canvas pipelines force a painful trade-off between quantization speed and sampling fidelity. Img2UI decouples these two concerns:
+- Fast downsampled canvas ($150\text{px}$) for instant palette extraction on upload.
+- Full-resolution uncompressed canvas for the $16 \times 16$ 5x magnifier loupe, enabling precision pixel sampling without blur artifacts.
+
+### 4. Multi-Device Viewport Emulation
+
+Designers need to verify token adaptability across device form factors. Img2UI includes a hardware-accelerated viewport switcher:
+- **Desktop**: Expansive $1100\text{px}$ dashboard with multi-column stats, search bar, and filter chips.
+- **Tablet**: Responsive $768\text{px}$ layout with responsive column reflow.
+- **Mobile Phone Shell**: $380\text{px}$ phone enclosure complete with speaker notch, front camera, Dynamic Island indicator, and home swipe bar.
+
+---
+
+# Multi-Format Token Export Engine
+
+Themes can be exported instantly to production codebases via the built-in modal:
+
+```json
+// Sample W3C Design Tokens Community Group JSON Export
+{
+  "theme": {
+    "name": "img2ui-aurora",
+    "primary": { "value": "#06B6D4", "type": "color" },
+    "secondary": { "value": "#52C3DA", "type": "color" },
+    "accent": { "value": "#A78BFA", "type": "color" },
+    "surface": { "value": "rgba(18, 30, 48, 0.72)", "type": "color" },
+    "background": { "value": "#0A111E", "type": "color" },
+    "radius": { "value": "16px", "type": "dimension" }
+  }
+}
+```
+
+Supports:
+1. **CSS Custom Properties**: `:root { --theme-primary: ...; }`
+2. **Tailwind CSS**: `module.exports = { theme: { extend: { colors: { ... } } } }`
+3. **SCSS Variables**: `$theme-primary: #...;`
+4. **Design Tokens JSON**: Standardized schema for Figma, Style Dictionary, and Token Studio.
+
+---
+
+# Installation & Setup Guide
+
+### 1. Prerequisites
+- **Node.js**: v18.0.0 or higher
+- **npm**: v9.0.0 or higher
+
+### 2. Clone & Install
+```bash
+# Clone the repository
+git clone https://github.com/Omega131/Img2UI.git
+
+# Navigate into project directory
+cd Img2UI
+
+# Install dev dependencies
+npm install
+```
+
+### 3. Start Development Server
+```bash
+npm run dev
+```
+Open [http://localhost:5173/](http://localhost:5173/) in your web browser.
+
+### 4. Production Build
+```bash
+npm run build
+```
+Generates optimized, bundled assets in the `dist/` directory.
+
+---
+
+# License
+
+Distributed under the **MIT License**. See `LICENSE` for more information.
